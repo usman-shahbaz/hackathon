@@ -1,0 +1,160 @@
+<style>
+
+@keyframes jogging {
+  0%   { 
+    transform: translateX(calc(100vw + 100px)) translateY(0) rotateY(180deg); 
+  }
+  15%  { transform: translateX(85vw) translateY(-8px) rotateY(180deg); }
+  30%  { transform: translateX(70vw) translateY(0) rotateY(180deg); }
+  45%  { transform: translateX(55vw) translateY(-8px) rotateY(180deg); }
+  49%  { transform: translateX(51vw) translateY(0) rotateY(180deg); }
+  50%  { transform: translateX(50vw) translateY(0) rotateY(0deg); }
+  65%  { transform: translateX(35vw) translateY(-8px) rotateY(0deg); }
+  80%  { transform: translateX(20vw) translateY(0) rotateY(0deg); }
+  95%  { transform: translateX(5vw) translateY(-8px) rotateY(0deg); }
+  100% { 
+    transform: translateX(-100px) translateY(0) rotateY(0deg); 
+  }
+}
+
+.running-container {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  margin-bottom: 1.5rem;
+  background: #e8f4f8;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  overflow: hidden;
+}
+
+/* Mini "Google Maps" roads */
+.running-container::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 40px;
+  background: #a1c6ea;
+  bottom: 30px;
+  opacity: 0.6;
+}
+
+.running-container::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 20px;
+  background: #f5f5f5;
+  bottom: 40px;
+  opacity: 0.8;
+  border-top: 2px dashed #ccc;
+}
+
+.runner {
+  position: absolute;
+  font-size: 2rem;
+  transform-origin: center;
+  filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.2));
+  animation: jogging linear infinite;
+  bottom: 30px;
+  z-index: 2;
+}
+
+.runner:nth-child(1) {
+  animation-duration: 8s;
+  animation-delay: 0s;
+}
+
+.runner:nth-child(2) {
+  animation-duration: 12s;
+  animation-delay: 2s;
+  font-size: 2.2rem;
+  bottom: 35px;
+}
+
+.runner:nth-child(3) {
+  animation-duration: 10s;
+  animation-delay: 1s;
+  font-size: 1.8rem;
+  bottom: 25px;
+}
+
+.runner:nth-child(4) {
+  animation-duration: 15s;
+  animation-delay: 3s;
+  font-size: 2rem;
+  bottom: 20px;
+}
+
+.pin {
+  position: absolute;
+  right: 10px;
+  bottom: 60px;
+  font-size: 2.5rem;
+  transform: translateY(-5px);
+  animation: bounce 0.8s infinite alternate;
+  z-index: 3;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-10px); }
+}
+
+.title-text {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  text-align: center;
+  color: #1a73e8;
+}
+
+.subtitle {
+  text-align: center;
+  color: #5f6368;
+  margin-bottom: 2rem;
+}
+
+.google-credit-inside strong {
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.google-credit-inside {
+  position: absolute;
+  top: 0; /* Move it to the top */
+  width: 100%;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #5f6368;
+  background: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid #ccc; /* Top border becomes bottom border */
+  padding: 6px 0;
+  z-index: 3;
+}
+
+.g-blue { color: #4285F4; }
+.g-red { color: #EA4335; }
+.g-yellow { color: #FBBC05; }
+.g-green { color: #34A853; }
+
+
+</style>
+
+<div class="running-container">
+  <div class="runner">🚴‍♂️</div>
+  <div class="runner">🏃‍♂️</div>
+  <div class="runner">🚴‍♂️</div>
+  <div class="runner">🚶‍♂️🐕</div>
+  <div class="pin">🚦</div>
+
+  <!-- New credit line inside container -->
+  <div class="google-credit-inside">
+  Powered by
+  <strong>
+    <span class="g-blue">G</span><span class="g-red">o</span><span class="g-yellow">o</span><span class="g-blue">g</span><span class="g-green">l</span><span class="g-red">e</span>
+    Maps Platform
+  </strong>
+</div>
+
+</div>
