@@ -16,14 +16,13 @@ GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 
 gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
 
-# Enhanced UI styling
 st.set_page_config(
     page_title="Smart Jogging Routes",
     page_icon="🏃‍♂️",
     layout="wide"
 )
 
-# Initialize session state
+
 if 'results_generated' not in st.session_state:
     st.session_state.results_generated = False
 if 'route_data' not in st.session_state:
@@ -84,7 +83,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Utility Functions
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=300)  
 def geocode_address(address):
     try:
         geocode_result = gmaps.geocode(address)
@@ -94,7 +93,7 @@ def geocode_address(address):
         st.error(f"Geocoding error: {e}")
     return None
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=3600)  
 def get_timezone(lat, lng):
     try:
         timestamp = int(datetime.utcnow().timestamp())
@@ -113,65 +112,49 @@ def get_elevation(lat, lng):
         st.error(f"Elevation error: {e}")
         return 0
 
-@st.cache_data(ttl=300)  # Cache air quality data for 5 minutes
+@st.cache_data(ttl=300)
 def get_air_quality_data(lat, lng):
-    """Enhanced air quality data retrieval"""
+    """Fetches actual AQI from Google Air Quality API"""
     url = f"https://airquality.googleapis.com/v1/currentConditions:lookup?key={GOOGLE_API_KEY}"
     payload = {
-        "location": {"latitude": lat, "longitude": lng},
-        "extraComputations": [
-            "HEALTH_RECOMMENDATIONS",
-            "DOMINANT_POLLUTANT_CONCENTRATION",
-            "POLLUTANT_CONCENTRATION",
-            "LOCAL_AQI",
-            "POLLUTANT_ADDITIONAL_INFO"
-        ],
+        "location": {
+            "latitude": lat,
+            "longitude": lng
+        },
         "languageCode": "en"
     }
-    
+
     try:
         response = requests.post(url, json=payload, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        if "currentConditions" in data:
-            conditions = data["currentConditions"]
-            indexes = conditions.get("indexes", [])
-            
-            # Get Universal AQI
-            universal_aqi = next((idx for idx in indexes if idx["code"] == "uaqi"), None)
-            
-            if universal_aqi:
+        if response.status_code == 200:
+            data = response.json()
+            if "currentConditions" in data:
+                aqi_info = data["currentConditions"]["indexes"][0]
                 return {
-                    "aqi": universal_aqi["aqi"],
-                    "category": universal_aqi["category"],
-                    "display_name": universal_aqi["displayName"],
-                    "dominant_pollutant": universal_aqi.get("dominantPollutant", "unknown"),
-                    "color": universal_aqi.get("color", {"red": 0, "green": 255, "blue": 0}),
-                    "health_recommendations": conditions.get("healthRecommendations", {}),
-                    "pollutants": conditions.get("pollutants", [])
+                    "aqi": aqi_info.get("aqi"),
+                    "category": aqi_info.get("category"),
+                    "dominant_pollutant": aqi_info.get("dominantPollutant", "unknown"),
+                    "display_name": aqi_info.get("displayName", "Universal AQI")
                 }
-    except requests.exceptions.RequestException as e:
-        st.warning(f"Air quality API request failed: {e}")
+        else:
+            st.warning(f"AQI API error {response.status_code}: {response.text}")
     except Exception as e:
-        st.warning(f"Air quality API error: {e}")
+        st.warning(f"Air quality API failed: {e}")
     
-    # Return simulated data if API fails
+    
     return {
         "aqi": 85,
         "category": "Moderate",
-        "display_name": "Universal AQI",
         "dominant_pollutant": "PM2.5",
-        "color": {"red": 255, "green": 165, "blue": 0},
-        "health_recommendations": {},
-        "pollutants": []
+        "display_name": "Fallback AQI"
     }
 
-@st.cache_data(ttl=600)  # Cache heatmap data for 10 minutes
+
+@st.cache_data(ttl=600) 
 def generate_pollution_heatmap_data(center_lat, center_lng, radius_km=5):
     """Generate grid points for pollution heatmap"""
     points = []
-    grid_size = 20  # Grid size for heatmap
+    grid_size = 20  
     
     # Calculate bounds
     lat_range = radius_km / 111.0  # Approximate km to degrees
@@ -186,9 +169,9 @@ def generate_pollution_heatmap_data(center_lat, center_lng, radius_km=5):
             distance = geodesic((center_lat, center_lng), (lat, lng)).kilometers
             
             # More realistic pollution simulation
-            base_pollution = 60  # Base urban pollution
-            distance_factor = max(0, distance * 8)  # Pollution decreases with distance
-            random_factor = np.random.normal(0, 15)  # Random variation
+            base_pollution = 60  
+            distance_factor = max(0, distance * 8) 
+            random_factor = np.random.normal(0, 15)  
             
             simulated_aqi = max(30, min(250, base_pollution + distance_factor + random_factor))
             
@@ -196,7 +179,7 @@ def generate_pollution_heatmap_data(center_lat, center_lng, radius_km=5):
                 'lat': lat,
                 'lng': lng,
                 'aqi': simulated_aqi,
-                'weight': min(1.0, simulated_aqi / 200.0)  # Normalize for heatmap
+                'weight': min(1.0, simulated_aqi / 200.0)  
             })
     
     return points
@@ -205,13 +188,13 @@ def create_plotly_map(center_coords, aqi_data, heatmap_data, routes):
     """Create an interactive Plotly map with pollution heatmap and routes"""
     lat, lng = center_coords['lat'], center_coords['lng']
     
-    # Create figure with multiple traces
+   
     fig = go.Figure()
     
-    # Add heatmap data as scatter plot with density mapbox
+    
     heatmap_df = pd.DataFrame(heatmap_data)
     
-    # Create color scale for AQI
+    
     def get_aqi_color(aqi):
         if aqi <= 50:
             return 'green'
@@ -311,11 +294,11 @@ def create_alternative_map_with_pydeck(center_coords, aqi_data, heatmap_data, ro
     
     lat, lng = center_coords['lat'], center_coords['lng']
     
-    # Prepare heatmap data
+    
     heatmap_df = pd.DataFrame(heatmap_data)
     heatmap_df['weight'] = heatmap_df['aqi'] / 200.0
     
-    # Create layers
+   
     layers = []
     
     # Heatmap layer
@@ -368,7 +351,7 @@ def create_alternative_map_with_pydeck(center_coords, aqi_data, heatmap_data, ro
             pickable=True
         ))
     
-    # Create deck
+    
     view_state = pdk.ViewState(
         latitude=lat,
         longitude=lng,
@@ -400,13 +383,13 @@ def generate_optimized_routes(center_coords, heatmap_data, num_routes=3):
     
     # Generate different route patterns
     route_patterns = [
-        # Route 1: North-East loop
+        
         [(lat, lng), (lat + 0.008, lng + 0.008), (lat + 0.015, lng + 0.005), 
          (lat + 0.018, lng - 0.005), (lat + 0.008, lng - 0.008), (lat, lng)],
-        # Route 2: South-West loop  
+         
         [(lat, lng), (lat - 0.008, lng - 0.008), (lat - 0.015, lng - 0.005), 
          (lat - 0.018, lng + 0.005), (lat - 0.008, lng + 0.008), (lat, lng)],
-        # Route 3: East-West route
+        
         [(lat, lng), (lat + 0.005, lng + 0.015), (lat + 0.010, lng + 0.020), 
          (lat + 0.005, lng + 0.025), (lat - 0.005, lng + 0.015), (lat, lng)]
     ]
@@ -414,15 +397,15 @@ def generate_optimized_routes(center_coords, heatmap_data, num_routes=3):
     for i, pattern in enumerate(route_patterns):
         coordinates = pattern
         
-        # Calculate route metrics
+       
         total_distance = sum(geodesic(coordinates[j], coordinates[j+1]).kilometers 
                            for j in range(len(coordinates)-1))
         
-        # Estimate average AQI along route
+        
         aqi_values = []
         for coord in coordinates:
             key = (round(coord[0], 4), round(coord[1], 4))
-            aqi = pollution_grid.get(key, 80)  # Default AQI if not found
+            aqi = pollution_grid.get(key, 80)  
             aqi_values.append(aqi)
         
         avg_aqi = np.mean(aqi_values)
@@ -434,7 +417,7 @@ def generate_optimized_routes(center_coords, heatmap_data, num_routes=3):
             'route_id': i + 1
         })
     
-    return sorted(routes, key=lambda x: x['avg_aqi'])  # Sort by air quality
+    return sorted(routes, key=lambda x: x['avg_aqi'])  
 
 def get_health_recommendations(aqi_data, user_profile):
     """Generate personalized health recommendations"""
@@ -454,7 +437,7 @@ def get_health_recommendations(aqi_data, user_profile):
         recommendations.append("🚨 Poor air quality. Avoid outdoor exercise.")
         alert_class = "alert-poor"
     
-    # Add health condition specific advice
+    
     if 'Asthma' in user_profile['health_conditions']:
         if aqi > 100:
             recommendations.append("🫁 Asthma Alert: Air quality may trigger symptoms. Consider indoor exercise.")
@@ -463,7 +446,7 @@ def get_health_recommendations(aqi_data, user_profile):
         if aqi > 100:
             recommendations.append("❤️ Heart Health: Poor air quality may strain cardiovascular system. Consult doctor.")
     
-    # Add fitness level recommendations
+    
     if user_profile['fitness_level'] == 'Beginner' and aqi > 100:
         recommendations.append("🏃‍♀️ Beginner Tip: Start with indoor exercise when air quality is moderate or poor.")
     
@@ -472,7 +455,7 @@ def get_health_recommendations(aqi_data, user_profile):
 def process_route_generation(location, distance, fitness_level, health_conditions, time_preference):
     """Process route generation and store results in session state"""
     try:
-        # Geocode location
+        
         coords = geocode_address(location)
         if not coords:
             st.error("❌ Could not find the specified location. Please try again.")
@@ -500,7 +483,7 @@ def process_route_generation(location, distance, fitness_level, health_condition
             
             status.update(label="Complete!", state="complete")
         
-        # Store results in session state
+        
         st.session_state.route_data = {
             'coords': coords,
             'aqi_data': aqi_data,
@@ -565,8 +548,8 @@ def display_results():
     if st.session_state.map_data:
         st.plotly_chart(st.session_state.map_data, use_container_width=True)
     
-    # Option to show PyDeck map (uncomment if preferred)
-    st.markdown("### 🗺️ Alternative PyDeck Map")
+    
+    st.markdown("### 🗺️ Still working on Heat Maps of Polluted areas")
     try:
         pydeck_map = create_alternative_map_with_pydeck(data['coords'], data['aqi_data'], 
                                                        generate_pollution_heatmap_data(data['coords']['lat'], data['coords']['lng']), 
@@ -590,7 +573,7 @@ def display_results():
                 st.write(f"**Calories (est.):** {route['distance'] * 65:.0f}")
                 st.write(f"**Difficulty:** {data['fitness_level']}")
     
-    # Additional insights
+  
     st.markdown("### 📈 Environmental Insights")
     col1, col2 = st.columns(2)
     
@@ -609,12 +592,31 @@ def display_results():
         st.write(f"• Pollution avoidance: {improvement:.0f}%")
         st.write(f"• Health risk: {'Low' if best_route['avg_aqi'] < 100 else 'Moderate' if best_route['avg_aqi'] < 150 else 'High'}")
 
-# Main Streamlit App
 def main():
+
+    with open("animated_header.html", "r", encoding="utf-8") as f:
+        animated_header = f.read()
+        st.markdown(animated_header, unsafe_allow_html=True)
+
     st.markdown('<h1 class="main-header">🏃‍♂️ Smart Air Quality Jogging Routes</h1>', unsafe_allow_html=True)
     st.markdown("### Real-time pollution analysis for optimal jogging routes")
     
-    # Sidebar for user inputs
+    
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] {
+            width: 400px !important;
+        }
+        [data-testid="stSidebar"] > div:first-child {
+            width: 400px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
     with st.sidebar:
         st.header("🎯 Route Preferences")
         location = st.text_input("📍 Starting Location", "Times Square, New York", key="location_input")
@@ -632,7 +634,6 @@ def main():
             if success:
                 st.success("✅ Routes generated successfully!")
         
-        # Clear results button
         if st.session_state.results_generated:
             if st.button("🗑️ Clear Results", key="clear_button"):
                 st.session_state.results_generated = False
